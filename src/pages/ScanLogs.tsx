@@ -1,17 +1,21 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { RefreshCw, Search, Inbox, Filter } from 'lucide-react';
+import { RefreshCw, Search, Inbox } from 'lucide-react';
 
-interface ScanLog {
+export interface ScanLog {
   id: string;
-  barcode_no: string;
-  material_name: string;
+  barcode_no: string | null;
+  material_name: string | null;
   batch_no: number | null;
   vendor_name: string | null;
   quantity_kg: number | null;
-  status: string;
-  scanned_at: string;
+  status: string | null;
+  scanned_at: string | null;
+  created_at: string | null;
+  payload?: any;
 }
+
+const safeText = (value: unknown): string => String(value ?? '').toLowerCase();
 
 export default function ScanLogs() {
   const [logs, setLogs] = useState<ScanLog[]>([]);
@@ -39,10 +43,13 @@ export default function ScanLogs() {
         return;
       }
 
-      setLogs(data || []);
+      const logsData = (data || []) as ScanLog[];
+      setLogs(logsData);
       
       // Extract unique materials
-      const uniqueMaterials = Array.from(new Set((data || []).map(log => log.material_name)));
+      const uniqueMaterials: string[] = Array.from(
+        new Set(logsData.map((log: ScanLog) => log.material_name).filter(Boolean))
+      ) as string[];
       setMaterials(uniqueMaterials);
       
     } catch (err) {
@@ -57,15 +64,16 @@ export default function ScanLogs() {
 
     const subscription = supabase
       .channel('public:scan_logs')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'scan_logs' }, (payload) => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'scan_logs' }, (payload: any) => {
         // Prepend new row to the logs list
         const newLog = payload.new as ScanLog;
         setLogs(prev => [newLog, ...prev]);
         
         // Update unique materials if it's a new one
         setMaterials(prev => {
-          if (!prev.includes(newLog.material_name)) {
-            return [...prev, newLog.material_name];
+          const matName = newLog.material_name;
+          if (matName && !prev.includes(matName)) {
+            return [...prev, matName];
           }
           return prev;
         });
@@ -82,10 +90,10 @@ export default function ScanLogs() {
     let result = logs;
 
     if (searchTerm) {
-      const lowerSearch = searchTerm.toLowerCase();
+      const lowerSearch = safeText(searchTerm);
       result = result.filter(log => 
-        log.barcode_no.toLowerCase().includes(lowerSearch) ||
-        log.vendor_name?.toLowerCase().includes(lowerSearch)
+        safeText(log.barcode_no).includes(lowerSearch) ||
+        safeText(log.vendor_name).includes(lowerSearch)
       );
     }
 
@@ -94,13 +102,14 @@ export default function ScanLogs() {
     }
 
     if (dateFilter) {
-      result = result.filter(log => log.scanned_at.startsWith(dateFilter));
+      result = result.filter(log => (log.scanned_at || '').startsWith(dateFilter));
     }
 
     setFilteredLogs(result);
   }, [logs, searchTerm, materialFilter, dateFilter]);
 
-  const formatDate = (isoString: string) => {
+  const formatDate = (isoString: string | null) => {
+    if (!isoString) return '-';
     const date = new Date(isoString);
     return date.toLocaleString(undefined, { 
       year: 'numeric',
@@ -112,7 +121,8 @@ export default function ScanLogs() {
     });
   };
 
-  const getStatusTag = (status: string) => {
+  const getStatusTag = (status: string | null) => {
+    if (!status) return 'tag tag-default';
     const lowerStatus = status.toLowerCase();
     if (lowerStatus.includes('in')) return 'tag tag-success';
     if (lowerStatus.includes('out') || lowerStatus.includes('pending')) return 'tag tag-warning';
