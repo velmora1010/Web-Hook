@@ -1,8 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Initialize Supabase client with the service role key for admin privileges
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+declare const process: {
+  env: Record<string, string | undefined>;
+};
+
+const supabaseUrl = process.env['SUPABASE_URL'] || '';
+const supabaseServiceKey = process.env['SUPABASE_SERVICE_ROLE_KEY'] || '';
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 export default async function handler(req: any, res: any) {
