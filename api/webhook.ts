@@ -35,7 +35,7 @@ export default async function handler(req: any, res: any) {
     }
 
     // Insert into Supabase
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('scan_logs')
       .insert([
         {
