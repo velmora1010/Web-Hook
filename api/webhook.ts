@@ -26,41 +26,32 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const payload = req.body;
-    console.log('Received payload:', payload);
+    const body = req.body;
+    console.log('Received payload:', body);
 
-    // Validate required fields
-    const { barcode_no, material_name, status, scanned_at } = payload;
-    
-    if (!barcode_no || !material_name || !status || !scanned_at) {
-      return res.status(400).json({ 
-        error: 'Missing required fields: barcode_no, material_name, status, scanned_at' 
-      });
-    }
+    const insertPayload = {
+      barcode_no: body.barcode_no ?? null,
+      material_name: body.material_name ?? null,
+      batch_no: body.batch_no ? Number(body.batch_no) : null,
+      vendor_name: body.vendor_name ?? null,
+      quantity_kg: body.quantity_kg ? Number(body.quantity_kg) : null,
+      status: body.status ?? "Stock In",
+      scanned_at: body.scanned_at ?? new Date().toISOString(),
+      payload: body.payload ?? body
+    };
 
-    // Insert into Supabase
-    const { error } = await supabase
-      .from('scan_logs')
-      .insert([
-        {
-          barcode_no: payload.barcode_no,
-          material_name: payload.material_name,
-          batch_no: payload.batch_no || null,
-          vendor_name: payload.vendor_name || null,
-          quantity_kg: payload.quantity_kg || null,
-          status: payload.status,
-          payload: payload, // storing the full raw payload
-          scanned_at: payload.scanned_at,
-        }
-      ])
-      .select();
+    const { data, error } = await supabase
+      .from("scan_logs")
+      .insert(insertPayload)
+      .select()
+      .single();
 
     if (error) {
-      console.error('Supabase error:', error);
-      return res.status(500).json({ error: 'Failed to insert data into database.' });
+      console.error("Supabase insert error:", error);
+      return res.status(500).json({ success: false, error });
     }
 
-    return res.status(200).json({ success: true });
+    return res.status(200).json({ success: true, data });
   } catch (error) {
     console.error('Webhook error:', error);
     return res.status(500).json({ error: 'Internal Server Error' });
