@@ -33,14 +33,13 @@ export default function Dashboard() {
 
   const fetchData = async () => {
     try {
-      // We will do a single query to fetch the necessary data for calculations
       const { data, error } = await supabase
-        .from('scan_logs')
-        .select('*')
-        .order('scanned_at', { ascending: false });
+        .from("scan_logs")
+        .select("*")
+        .order("created_at", { ascending: false });
 
       if (error) {
-        console.error('Error fetching data:', error);
+        console.error("Error fetching data:", error);
         setIsConnected(false);
         return;
       }
@@ -56,8 +55,9 @@ export default function Dashboard() {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const todaysScans = logs.filter((scan: ScanLog) => {
-        if (!scan.scanned_at) return false;
-        return new Date(scan.scanned_at) >= today;
+        const scanDateStr = scan.created_at || scan.scanned_at;
+        if (!scanDateStr) return false;
+        return new Date(scanDateStr) >= today;
       }).length;
       
       // Calculate unique materials
@@ -81,12 +81,22 @@ export default function Dashboard() {
 
     // Set up Realtime subscription for Dashboard
     const subscription = supabase
-      .channel('public:scan_logs_dashboard')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'scan_logs' }, (payload: any) => {
-        // Auto refresh stats and lists
-        fetchData();
-      })
+      .channel("scan_logs_realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "scan_logs"
+        },
+        (payload) => {
+          console.log("New scan received:", payload.new);
+          // Auto refresh stats and lists
+          fetchData();
+        }
+      )
       .subscribe((status: string) => {
+        console.log("Realtime status:", status);
         if (status === 'SUBSCRIBED') {
           setIsConnected(true);
         } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {

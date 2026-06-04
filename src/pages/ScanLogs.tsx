@@ -34,12 +34,12 @@ export default function ScanLogs() {
     try {
       setIsLoading(true);
       const { data, error } = await supabase
-        .from('scan_logs')
-        .select('*')
-        .order('scanned_at', { ascending: false });
+        .from("scan_logs")
+        .select("*")
+        .order("created_at", { ascending: false });
 
       if (error) {
-        console.error('Error fetching logs:', error);
+        console.error("Error fetching logs:", error);
         return;
       }
 
@@ -63,8 +63,8 @@ export default function ScanLogs() {
     fetchLogs();
 
     const subscription = supabase
-      .channel('public:scan_logs')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'scan_logs' }, (payload: any) => {
+      .channel("scan_logs_realtime")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "scan_logs" }, (payload: any) => {
         // Prepend new row to the logs list
         const newLog = payload.new as ScanLog;
         setLogs(prev => [newLog, ...prev]);

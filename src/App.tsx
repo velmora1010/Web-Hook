@@ -20,7 +20,7 @@ function App() {
     const audio = new Audio(NOTIFICATION_SOUND);
     
     const subscription = supabase
-      .channel('global_notifications')
+      .channel("scan_logs_realtime")
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'scan_logs' }, (payload: any) => {
         const newLog = payload.new as ScanLog;
         
