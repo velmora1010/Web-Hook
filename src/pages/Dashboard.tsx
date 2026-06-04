@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Barcode, Box, Clock, Activity, History, Package, AlertCircle } from 'lucide-react';
+import { Barcode, Box, Activity, History, Package, AlertCircle } from 'lucide-react';
 
 export interface ScanLog {
   id: string;
