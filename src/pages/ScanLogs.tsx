@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { RefreshCw, Search, Inbox } from 'lucide-react';
+import { RefreshCw, Search, Inbox, Download } from 'lucide-react';
 
 export interface ScanLog {
   id: string;
@@ -93,6 +93,7 @@ export default function ScanLogs() {
       const lowerSearch = safeText(searchTerm);
       result = result.filter(log => 
         safeText(log.barcode_no).includes(lowerSearch) ||
+        safeText(log.material_name).includes(lowerSearch) ||
         safeText(log.vendor_name).includes(lowerSearch)
       );
     }
@@ -129,6 +130,31 @@ export default function ScanLogs() {
     return 'tag tag-default';
   };
 
+  const exportToCSV = () => {
+    if (filteredLogs.length === 0) return;
+    
+    const headers = ['Time', 'Barcode', 'Material', 'Batch', 'Vendor', 'Quantity (kg)', 'Status'];
+    const rows = filteredLogs.map(log => [
+      log.scanned_at || '',
+      log.barcode_no || '',
+      log.material_name || '',
+      log.batch_no || '',
+      log.vendor_name || '',
+      log.quantity_kg || '',
+      log.status || ''
+    ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(','));
+    
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `scan_logs_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="animate-fade-in">
       <div className="page-header" style={{ alignItems: 'flex-start', textAlign: 'left', marginBottom: '24px' }}>
@@ -143,7 +169,7 @@ export default function ScanLogs() {
             <input 
               type="text" 
               className="search-input" 
-              placeholder="Search barcode or vendor..."
+              placeholder="Search barcode, material, or vendor..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -173,6 +199,10 @@ export default function ScanLogs() {
             <button className="btn btn-secondary" onClick={fetchLogs} disabled={isLoading}>
               <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
               Refresh
+            </button>
+            <button className="btn btn-primary" onClick={exportToCSV} disabled={filteredLogs.length === 0}>
+              <Download size={18} />
+              Export CSV
             </button>
           </div>
         </div>
